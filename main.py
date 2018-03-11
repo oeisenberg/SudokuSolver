@@ -60,7 +60,7 @@ def sudoku_solver(sudoku):
                     else:
                         # If all values are exhasted go back and recurse
                         try:
-                            while index == -1 and new_index <= len(str(possible_array_str[y][x])):
+                            while index == -1 and new_index + 1 <= len(str(possible_array_str[y][x])) - 2:
                                 new_index = new_index + 1
                                 numb_to_add = int(str(possible_array_str[y][x])[new_index])
                                 index = get_index(numb_to_add,
@@ -86,14 +86,14 @@ def sudoku_solver(sudoku):
                                 # print(k, j)
                                 # Checks if laps if so try previous
                                 try:
-                                    while index == -1 and new_index <= len(str(possible_array_str[j][k])):
+                                    while index == -1 and new_index + 1 <= len(str(possible_array_str[j][k])) - 2:
                                         new_index = new_index + 1
                                         numb_to_add = int(str(possible_array_str[j][k])[new_index])
                                         index = get_index(numb_to_add,
                                                           ''.join(map(str, possible_values_checker(temp_sudoku, k, j))))
                                         if index != -1:
                                             print("adding", numb_to_add, k, j)
-                                            temp_sudoku[y][x] = numb_to_add
+                                            temp_sudoku[j][k] = numb_to_add
                                 except:
                                     new_index = -1
                             if count != 0:
@@ -114,7 +114,7 @@ def sudoku_solver(sudoku):
                                                           ''.join(map(str, possible_values_checker(temp_sudoku, n, m))))
                                         if index != -1:
                                             print("adding", numb_to_add, n, m)
-                                            temp_sudoku[y][x] = numb_to_add
+                                            temp_sudoku[m][n] = numb_to_add
 
                 else:
                     new_index = get_index(temp_sudoku[y+j][x+k], possible_array_str[y+j][x+k]) + 1  # gets current index
@@ -125,6 +125,7 @@ def sudoku_solver(sudoku):
 
 def safe_to_add(index, numb_to_add, n, m, temp_sudoku):
     if index != -1:
+        print("adding", numb_to_add, n, m)
         temp_sudoku[m][n] = numb_to_add
     else:
         print(numb_to_add)
