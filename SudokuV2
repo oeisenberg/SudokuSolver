@@ -2,26 +2,6 @@ import time
 import numpy as np
 # fill with -1 if invalid
 
-sudoku = np.array([[0, 0, 0, 6, 0, 0, 2, 8, 7],
-                  [0, 0, 0, 0, 3, 0, 5, 0, 1],
-                  [0, 0, 0, 8, 0, 5, 6, 0, 4],
-                  [5, 9, 0, 0, 0, 0, 4, 0, 0],
-                  [1, 0, 0, 0, 0, 0, 0, 0, 3],
-                  [0, 0, 4, 0, 0, 0, 0, 7, 5],
-                  [6, 0, 8, 1, 0, 2, 0, 0, 0],
-                  [3, 0, 7, 0, 4, 0, 0, 0, 0],
-                  [2, 4, 0, 0, 0, 3, 0, 1, 0]
-                   ])
-
-
-# A Utility Function to print the Grid
-def print_grid(arr):
-    for i in range(9):
-        for j in range(9):
-            print(arr[i][j]),
-        print('n')
-    return arr
-
 
 # Function to Find the entry in the Grid that is still  not used
 # Searches the grid to find an entry that is still unassigned. If
@@ -31,39 +11,11 @@ def print_grid(arr):
 # 'l' is a list  variable that has been passed from the solve_sudoku function
 # to keep track of incrementation of Rows and Columns
 def find_empty_location(arr, l):
-    for row in range(9):
-        for col in range(9):
+    for col in range(9):
+        for row in range(9):
             if arr[row][col] == 0:
                 l[0] = row
                 l[1] = col
-                return True
-    return False
-
-
-# Returns a boolean which indicates whether any assigned entry
-# in the specified row matches the given number.
-def used_in_row(arr, row, num):
-    for i in range(9):
-        if arr[row][i] == num:
-            return True
-    return False
-
-
-# Returns a boolean which indicates whether any assigned entry
-# in the specified column matches the given number.
-def used_in_col(arr, col, num):
-    for i in range(9):
-        if arr[i][col] == num:
-            return True
-    return False
-
-
-# Returns a boolean which indicates whether any assigned entry
-# within the specified 3x3 box matches the given number
-def used_in_unit_square(arr, row, col, num):
-    for i in range(3):
-        for j in range(3):
-            if arr[i + row][j + col] == num:
                 return True
     return False
 
@@ -72,10 +24,13 @@ def used_in_unit_square(arr, row, col, num):
 #  Returns a boolean which indicates whether it will be legal to assign
 #  num to the given row,col location.
 def check_location_is_safe(arr, row, col, num):
-    # Check if 'num' is not already placed in current row,
-    # current column and current 3x3 box
-    return not used_in_row(arr, row, num) and not used_in_col(arr, col, num) and not used_in_unit_square(arr, row - row % 3,
-                                                                                                         col - col % 3, num)
+    possible_values = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    values = checker(possible_values, arr, col, row)
+
+    for i in range(0, len(values)):
+        if int(values[i]) == num:
+            return True
+    return False
 
 
 # Takes a partially filled-in grid and attempts to assign values to
@@ -95,14 +50,17 @@ def solve_sudoku_recurisvely(arr, whitelist_array):
     col = l[1]
 
     # splits whitelist_array into seperate digits
-    poss_arr = get_possible_values_list(whitelist_array, row, col)
+    poss_arr = get_possible_values_list(whitelist_array, col, row)
 
     # check if empty then invalid sudoku
     # return false
 
     # iterate through possible values
     for i in range(0, len(poss_arr)):  # change to only consider the possible values for that square
-        num = poss_arr[i]
+        # print(poss_arr)
+        # print(poss_arr[i])
+        num = int(poss_arr[i])
+    # for num in range(0, 10):
 
         # if looks promising
         if check_location_is_safe(arr, row, col, num):
@@ -117,10 +75,11 @@ def solve_sudoku_recurisvely(arr, whitelist_array):
             arr[row][col] = 0
 
     # this triggers backtracking
+    # print("back")
     return False
 
 
-def get_possible_values_list(whitelist_array, row, col):
+def get_possible_values_list(whitelist_array, col, row):
     possible_values_list = []
     for i in range(0, len(str(whitelist_array[row][col]))):
         possible_values_list.append(str(whitelist_array[row][col])[i])
@@ -143,11 +102,19 @@ def get_whitelist(arr):
         for x in range(0, 9):
             if arr[y][x] == 0:
                 possible_values = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-                possible_values = row_checker(arr[y], possible_values)                      # check the row
-                possible_values = col_checker(column(arr, x), possible_values)              # check the col
-                possible_values = unit_checker(unit_square_builder(y, x), possible_values)  # check the unit square
-                whitelist_array[y][x] = int(''.join(map(str, possible_values)))
+                possible_values = checker(possible_values, arr, x, y)
+                whitelist_array[y][x] = ''.join(map(str, possible_values))
+            else:
+                whitelist_array[y][x] = arr[y][x]
+    # print(np.asarray(whitelist_array))
     return whitelist_array
+
+
+def checker(possible_values, arr, x, y):
+    possible_values = row_checker(arr[y], possible_values)                      # check the row
+    possible_values = col_checker(column(arr, x), possible_values)              # check the col
+    possible_values = unit_checker(unit_square_builder(y, x, arr), possible_values)  # check the unit square
+    return possible_values
 
 
 def column(matrix, i):
@@ -184,16 +151,17 @@ def col_checker(col, possible_values):
     return possible_values
 
 
-def unit_square_builder(y, x):
+def unit_square_builder(y, x, question):
+
     local_y = y % 3
     local_x = x % 3
 
     y = y - local_y
     x = x - local_x
 
-    unit = [[sudoku[y][x], sudoku[y][x + 1], sudoku[y][x + 2]],
-            [sudoku[y + 1][x], sudoku[y + 1][x + 1], sudoku[y + 1][x + 2]],
-            [sudoku[y + 2][x], sudoku[y + 2][x + 1], sudoku[y + 2][x + 2]]]
+    unit = [[question[y][x], question[y][x + 1], question[y][x + 2]],
+            [question[y + 1][x], question[y + 1][x + 1], question[y + 1][x + 2]],
+            [question[y + 2][x], question[y + 2][x + 1], question[y + 2][x + 2]]]
     return unit
 
 
@@ -210,7 +178,7 @@ def unit_checker(unit, possible_values):
 
 
 def solve(question):
-    arr = question.astype(str)
+    arr = question.astype(int)
     solve_sudoku_recurisvely(arr, get_whitelist(arr))
     return arr
 
@@ -221,11 +189,9 @@ solutions = np.load('solutions.npy')
 t0 = time.time()
 
 for i in range(0, 100):
-    solve(questions[i])
-
+    print(np.array_equal(solve(questions[i]), solutions[i]))
 
 t1 = time.time()
 total = t1-t0
 
 print(total)
-
