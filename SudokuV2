@@ -1,84 +1,48 @@
 import time
 import numpy as np
-# fill with -1 if invalid
+
+invalid_puzzle = np.full((9, 9), -1)
 
 
-# Function to Find the entry in the Grid that is still  not used
-# Searches the grid to find an entry that is still unassigned. If
-# found, the reference parameters row, col will be set the location
-# that is unassigned, and true is returned. If no unassigned entries
-# remain, false is returned.
-# 'l' is a list  variable that has been passed from the solve_sudoku function
-# to keep track of incrementation of Rows and Columns
-def find_empty_location(arr, l):
+# Finds the next empty square in the sudoku puzzle.
+def find_next_square(puzzle, location):
     for col in range(9):
         for row in range(9):
-            if arr[row][col] == 0:
-                l[0] = row
-                l[1] = col
+            if puzzle[row][col] == 0:
+                location[0] = row
+                location[1] = col
                 return True
+    # All squares are full, puzzle completed
     return False
 
 
-# Checks whether it will be legal to assign num to the given row,col
-#  Returns a boolean which indicates whether it will be legal to assign
-#  num to the given row,col location.
-def check_location_is_safe(arr, row, col, num):
-    possible_values = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    values = checker(possible_values, arr, col, row)
-
-    for i in range(0, len(values)):
-        if int(values[i]) == num:
-            return True
-    return False
-
-
-# Takes a partially filled-in grid and attempts to assign values to
-# all unassigned locations in such a way to meet the requirements
-# for Sudoku solution (non-duplication across rows, columns, and boxes)
-def solve_sudoku_recurisvely(arr, whitelist_array):
-    # 'l' is a list variable that keeps the record of row and col in find_empty_location Function
-    l = [0, 0]
-
-    # If there is no unassigned location, we are done
-    if not find_empty_location(arr, l):
-        print(arr)
+# Checks the location to get a new list of accepted inputs
+def check_if_location_is_safe(puzzle, row, col, num):
+    values = check_all_possible_values(puzzle, col, row)
+    if num in values:
         return True
-
-    # Assigning list values to row and col that we got from the above Function
-    row = l[0]
-    col = l[1]
-
-    # splits whitelist_array into seperate digits
-    poss_arr = get_possible_values_list(whitelist_array, col, row)
-
-    # check if empty then invalid sudoku
-    # return false
-
-    # iterate through possible values
-    for i in range(0, len(poss_arr)):  # change to only consider the possible values for that square
-        # print(poss_arr)
-        # print(poss_arr[i])
-        num = int(poss_arr[i])
-    # for num in range(0, 10):
-
-        # if looks promising
-        if check_location_is_safe(arr, row, col, num):
-
-            # make tentative assignment
-            arr[row][col] = num
-
-            if solve_sudoku_recurisvely(arr, whitelist_array):
-                return True
-
-            # failure, unmake & try again
-            arr[row][col] = 0
-
-    # this triggers backtracking
-    # print("back")
     return False
 
 
+# Creates a whitelist of possible values for a given square
+def check_all_possible_values(puzzle, x, y):
+    possible_values = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    possible_values = data_checker(puzzle[y], possible_values)
+    possible_values = data_checker(column(puzzle, x), possible_values)
+    possible_values = unit_checker(unit_square_builder(y, x, puzzle), possible_values)
+
+    if not possible_values:
+        possible_values = [-1]
+
+    return possible_values
+
+
+# Helper method to retrieve the column of a given array
+def column(puzzle, i):
+    return [row[i] for row in puzzle]
+
+
+# Re-formats the data from the whitelist array to a list
 def get_possible_values_list(whitelist_array, col, row):
     possible_values_list = []
     for i in range(0, len(str(whitelist_array[row][col]))):
@@ -86,8 +50,8 @@ def get_possible_values_list(whitelist_array, col, row):
     return possible_values_list
 
 
-# potential to run multipule times (until no changes)
-def get_whitelist(arr):
+# Creates a whitelist array for the whole puzzle for each square
+def get_whitelist(puzzle):
     whitelist_array = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
                        [0, 0, 0, 0, 0, 0, 0, 0, 0],
                        [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -100,96 +64,95 @@ def get_whitelist(arr):
                        ]
     for y in range(0, 9):
         for x in range(0, 9):
-            if arr[y][x] == 0:
-                possible_values = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-                possible_values = checker(possible_values, arr, x, y)
+            if puzzle[y][x] == 0:
+                possible_values = check_all_possible_values(puzzle, x, y)
+                # -1 is returned return the invalid puzzle base
+                if int(possible_values[0]) == -1:
+                    return invalid_puzzle
+
                 whitelist_array[y][x] = ''.join(map(str, possible_values))
             else:
-                whitelist_array[y][x] = arr[y][x]
-    # print(np.asarray(whitelist_array))
+                whitelist_array[y][x] = puzzle[y][x]
     return whitelist_array
 
 
-def checker(possible_values, arr, x, y):
-    possible_values = row_checker(arr[y], possible_values)                      # check the row
-    possible_values = col_checker(column(arr, x), possible_values)              # check the col
-    possible_values = unit_checker(unit_square_builder(y, x, arr), possible_values)  # check the unit square
-    return possible_values
-
-
-def column(matrix, i):
-    return [row[i] for row in matrix]
-
-
-def matches(value):
-    for z in range(1, 10):  # range of correct possible values is 1 to 9
-        if value == z:
-            return z
-    return -1
-
-
-def row_checker(row, possible_values):
-
-    for x in range(0, len(row)):
-        z = matches(row[x])
-        if z >= 1:
+# Checks all integers within the row/column
+def data_checker(data, possible_values):
+    for i in range(9):
+        if data[i] >= 1:
             try:
-                possible_values.remove(z)
+                possible_values.remove(data[i])
             except:
                 pass
     return possible_values
 
 
-def col_checker(col, possible_values):
-    for y in range(0, len(col)):
-        z = matches(col[y])
-        if z >= 1:
-            try:
-                possible_values.remove(z)
-            except:
-                pass
-    return possible_values
-
-
+# Builds a unit square by first finding the coordinates of the first square
 def unit_square_builder(y, x, question):
-
     local_y = y % 3
     local_x = x % 3
 
     y = y - local_y
     x = x - local_x
 
-    unit = [[question[y][x], question[y][x + 1], question[y][x + 2]],
-            [question[y + 1][x], question[y + 1][x + 1], question[y + 1][x + 2]],
-            [question[y + 2][x], question[y + 2][x + 1], question[y + 2][x + 2]]]
-    return unit
+    unit_square = [[question[y][x], question[y][x + 1], question[y][x + 2]],
+                   [question[y + 1][x], question[y + 1][x + 1], question[y + 1][x + 2]],
+                   [question[y + 2][x], question[y + 2][x + 1], question[y + 2][x + 2]]]
+    return unit_square
 
 
-def unit_checker(unit, possible_values):
+# Checks all integers within the unit square
+def unit_checker(unit_square, possible_values):
     for y in range(0, 3):
         for x in range(0, 3):
-            z = matches(unit[y][x])
-            if z >= 1:
-                try:
-                    possible_values.remove(z)
-                except:
-                    pass
+            try:
+                possible_values.remove(unit_square[y][x])
+            except:
+                pass
     return possible_values
 
 
-def solve(question):
-    arr = question.astype(int)
-    solve_sudoku_recurisvely(arr, get_whitelist(arr))
-    return arr
+def solve(puzzle, whitelist_array):
+    location = [0, 0]
+    if not find_next_square(puzzle, location):
+        return True
+    row = location[0]
+    col = location[1]
+    poss_puzzle = get_possible_values_list(whitelist_array, col, row)
+
+    for i in range(0, len(poss_puzzle)):
+        num = int(poss_puzzle[i])
+        if check_if_location_is_safe(puzzle, row, col, num):
+            puzzle[row][col] = num
+            if solve(puzzle, whitelist_array):
+                return True
+            puzzle[row][col] = 0
+    return False
+
+
+def sudoku_solver(question):
+    whitelist = get_whitelist(question)
+    if -1 in whitelist:
+        return invalid_puzzle
+    else:
+        if not solve(question, whitelist):
+            return invalid_puzzle
+    return question
 
 
 questions = np.load('sudokus.npy')
 solutions = np.load('solutions.npy')
+questions2 = np.load('sudoku-sample-1000.npy')
+harder = np.load('sudoku-sample-15-unsolvable.npy')
 
 t0 = time.time()
 
 for i in range(0, 100):
-    print(np.array_equal(solve(questions[i]), solutions[i]))
+    print(np.array_equal(sudoku_solver(questions[i]), solutions[i]))
+for i in range(0, 1000):
+    print(sudoku_solver(questions2[i]))
+for i in range(0, 15):
+    print(sudoku_solver(harder[i]))
 
 t1 = time.time()
 total = t1-t0
