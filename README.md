@@ -1,2 +1,2 @@
 # SudokuSolver
-Solves Sudoku Puzzles
+Solves Sudoku Puzzles via DFS and backtracking
